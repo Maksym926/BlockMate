@@ -13,6 +13,7 @@ Mobile app for students sharing an apartment: track who did which chore, keep a 
 | Stack, AI agent contract, sync | [docs/architecture.md](docs/architecture.md) |
 | Why we chose X | [docs/decisions.md](docs/decisions.md) |
 | Unresolved items | [docs/open-questions.md](docs/open-questions.md) |
+| Build spec (user stories, tests) | [docs/spec.md](docs/spec.md) |
 
 ## Non-negotiables
 
