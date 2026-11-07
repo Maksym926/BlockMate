@@ -11,6 +11,7 @@ export function ChoreList({
   error,
   onAdd,
   onDelete,
+  onSelect,
 }: {
   roomName: string;
   items: ChoreWithOccurrence[];
@@ -18,6 +19,7 @@ export function ChoreList({
   error: string | null;
   onAdd: () => void;
   onDelete: (choreId: string) => void;
+  onSelect: (item: ChoreWithOccurrence) => void;
 }) {
   const now = new Date();
 
@@ -49,6 +51,7 @@ export function ChoreList({
     return (
       <Pressable
         key={occurrence.id}
+        onPress={() => onSelect(item)}
         onLongPress={() => confirmDelete(chore.id, chore.title)}
         style={[styles.item, isOverdue && styles.itemOverdue]}
         accessibilityHint="Long press to delete"

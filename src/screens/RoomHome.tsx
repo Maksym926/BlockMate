@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { ChoreScope, RepeatInterval, Room } from '../data/app';
+import type { ChoreWithOccurrence, Room } from '../data/app';
 import { choresApi } from '../data/app';
 import { Banner, Button, Card, ResidentRow, TabBar } from '../ui/components';
 import { defaultDueAt, joinedLabel } from '../ui/format';
-import { choreMessageFor } from '../ui/messages';
 import { color, font } from '../ui/theme';
 import { useChores } from '../ui/useChores';
 import { useResidents } from '../ui/useResidents';
 import type { ChoreFormData } from './AddChore';
 import { AddChore } from './AddChore';
 import { AssigneePicker } from './AssigneePicker';
+import { ChoreDetail } from './ChoreDetail';
+import type { CompleteViewResult } from './ChoreCompleted';
+import { ChoreCompleted } from './ChoreCompleted';
 import { ChoreList } from './ChoreList';
 
 type Tab = 'chores' | 'shopping' | 'flat';
@@ -19,7 +21,9 @@ type Tab = 'chores' | 'shopping' | 'flat';
 type InRoomView =
   | { name: 'tabs'; activeTab: Tab }
   | { name: 'addChore' }
-  | { name: 'pickAssignee'; data: ChoreFormData };
+  | { name: 'pickAssignee'; data: ChoreFormData }
+  | { name: 'choreDetail'; item: ChoreWithOccurrence }
+  | { name: 'choreCompleted'; result: CompleteViewResult };
 
 export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => void }) {
   const { residents, loaded, error: residentsError } = useResidents(room.id);
@@ -79,6 +83,36 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
     );
   }
 
+  if (view.name === 'choreDetail') {
+    return (
+      <ChoreDetail
+        item={view.item}
+        residents={residents}
+        onBack={() => setView({ name: 'tabs', activeTab: 'chores' })}
+        onComplete={async () => {
+          const completion = await choresApi.complete(view.item.occurrence.id);
+          setView({
+            name: 'choreCompleted',
+            result: {
+              completion,
+              choreTitle: view.item.chore.title,
+              flatmateCount: residents.length,
+            },
+          });
+        }}
+      />
+    );
+  }
+
+  if (view.name === 'choreCompleted') {
+    return (
+      <ChoreCompleted
+        result={view.result}
+        onDone={() => setView({ name: 'tabs', activeTab: 'chores' })}
+      />
+    );
+  }
+
   // ── Tabbed view ──────────────────────────────────────────────────────────
 
   const { activeTab } = view;
@@ -132,6 +166,7 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
             error={choreError}
             onAdd={() => setView({ name: 'addChore' })}
             onDelete={handleDelete}
+            onSelect={(item) => setView({ name: 'choreDetail', item })}
           />
         ) : activeTab === 'shopping' ? (
           <View style={styles.placeholder}>

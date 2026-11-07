@@ -14,6 +14,10 @@ export function choreMessageFor(error: unknown): string {
       return 'Pick who does this chore.';
     case 'ROOM_NEEDS_2_MEMBERS':
       return 'You need at least 2 flatmates to assign chores.';
+    case 'ALREADY_DONE':
+      return 'This chore is already marked as done.';
+    case 'OCCURRENCE_NOT_FOUND':
+      return 'This chore no longer exists.';
     default:
       return 'Something went wrong. Check your connection and try again.';
   }

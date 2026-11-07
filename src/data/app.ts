@@ -40,6 +40,7 @@ export const roomsApi = {
 
 export const choresApi = {
   create: (params: Parameters<typeof chores.createChore>[1]) => chores.createChore(client, params),
+  complete: (occurrenceId: string) => chores.completeOccurrence(client, occurrenceId),
   delete: (choreId: string) => chores.deleteChore(client, choreId),
   subscribeOccurrences: (
     roomId: string,
@@ -48,6 +49,6 @@ export const choresApi = {
   ) => chores.subscribeOccurrences(client, roomId, onChange, onError),
 };
 
-export type { Chore, ChoreError, ChoreScope, ChoreWithOccurrence, Occurrence, RepeatInterval } from './chores';
+export type { Chore, ChoreError, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, RepeatInterval } from './chores';
 export type { Resident, Room, RoomPreview } from './rooms';
 export { RoomError } from './rooms';

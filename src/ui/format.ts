@@ -75,6 +75,20 @@ export function occurrenceGroup(
   return 'later';
 }
 
+/** Human-readable completion time, e.g. "today, 18:42" / "yesterday" / "2 Nov". */
+export function completionTime(completedAt: string, now: Date): string {
+  const d = new Date(completedAt);
+  const today = startOfDay(now);
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  if (d >= today) {
+    const hh = d.getHours().toString().padStart(2, '0');
+    const mm = d.getMinutes().toString().padStart(2, '0');
+    return `today, ${hh}:${mm}`;
+  }
+  if (d >= yesterday) return 'yesterday';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
 /** Default due time: today at 18:00 local; tomorrow if already past 18:00 today (D-021). */
 export function defaultDueAt(): Date {
   const d = new Date();

@@ -11,6 +11,8 @@ export type ChoreErrorCode =
   | 'ASSIGNEE_NOT_IN_ROOM'
   | 'ROOM_NEEDS_2_MEMBERS'
   | 'CHORE_NOT_FOUND'
+  | 'OCCURRENCE_NOT_FOUND'
+  | 'ALREADY_DONE'
   | 'NOT_AUTHENTICATED'
   | 'UNKNOWN';
 
@@ -52,12 +54,20 @@ export interface ChoreWithOccurrence {
   occurrence: Occurrence;
 }
 
+export interface CompletionResult {
+  residentId: string;
+  displayName: string;
+  completedAt: string;
+}
+
 const SERVER_MESSAGES: Record<string, ChoreErrorCode> = {
   'chore title required': 'CHORE_TITLE_REQUIRED',
   'assignee required': 'ASSIGNEE_REQUIRED',
   'assignee not in room': 'ASSIGNEE_NOT_IN_ROOM',
   'room needs 2 members': 'ROOM_NEEDS_2_MEMBERS',
   'chore not found': 'CHORE_NOT_FOUND',
+  'occurrence not found': 'OCCURRENCE_NOT_FOUND',
+  'already done': 'ALREADY_DONE',
   'not authenticated': 'NOT_AUTHENTICATED',
 };
 
@@ -134,6 +144,13 @@ export async function createChore(
   });
   if (error) throw mapChoreError(error);
   return toChore(data as ChoreRow);
+}
+
+export async function completeOccurrence(client: SupabaseClient, occurrenceId: string): Promise<CompletionResult> {
+  const { data, error } = await client.rpc('complete_occurrence', { p_occurrence_id: occurrenceId });
+  if (error) throw mapChoreError(error);
+  const r = data as { resident_id: string; display_name: string; completed_at: string };
+  return { residentId: r.resident_id, displayName: r.display_name, completedAt: r.completed_at };
 }
 
 export async function deleteChore(client: SupabaseClient, choreId: string): Promise<void> {
