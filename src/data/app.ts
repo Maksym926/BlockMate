@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import * as chores from './chores';
 import * as rooms from './rooms';
+import * as shopping from './shopping';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -63,8 +64,25 @@ export const choresApi = {
   ) => chores.subscribeOccurrences(client, roomId, onChange, onError),
 };
 
+export const shoppingApi = {
+  addItem: (roomId: string, name: string, quantity?: number) =>
+    shopping.addItem(client, roomId, name, quantity),
+  tickItem: (itemId: string) => shopping.tickItem(client, itemId),
+  untickItem: (itemId: string) => shopping.untickItem(client, itemId),
+  deleteItem: (itemId: string) => shopping.deleteItem(client, itemId),
+  increaseQuantity: (itemId: string, addQty: number) =>
+    shopping.increaseQuantity(client, itemId, addQty),
+  subscribeItems: (
+    roomId: string,
+    onChange: (items: shopping.ShoppingItem[]) => void,
+    onError?: (error: shopping.ShoppingError) => void,
+  ) => shopping.subscribeItems(client, roomId, onChange, onError),
+};
+
 export type { Chore, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, PassResult, RepeatInterval, SuggestionResult } from './chores';
 // A class used with instanceof in the UI, so it must be a value export, not type-only.
 export { ChoreError } from './chores';
 export type { Resident, Room, RoomPreview } from './rooms';
 export { RoomError } from './rooms';
+export type { ShoppingItem } from './shopping';
+export { ShoppingError } from './shopping';

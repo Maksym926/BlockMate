@@ -19,6 +19,7 @@ import { ChoreDetail } from './ChoreDetail';
 import type { CompleteViewResult } from './ChoreCompleted';
 import { ChoreCompleted } from './ChoreCompleted';
 import { ChoreList } from './ChoreList';
+import { ShoppingList } from './ShoppingList';
 
 type Tab = 'chores' | 'shopping' | 'flat';
 
@@ -256,9 +257,7 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
             onSelect={(item) => setView({ name: 'choreDetail', item })}
           />
         ) : activeTab === 'shopping' ? (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>Shopping list coming soon</Text>
-          </View>
+          <ShoppingList roomId={room.id} residents={residents} />
         ) : (
           flatContent
         )}
@@ -285,6 +284,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   nudgeBtnLabel: { ...font.callout, color: color.brandInk },
-  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  placeholderText: { ...font.body, color: color.inkMuted },
 });
