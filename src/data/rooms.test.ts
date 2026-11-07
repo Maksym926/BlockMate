@@ -27,10 +27,11 @@ describe('mapRoomError', () => {
   });
 });
 
-// ---- Integration: two independent clients ("phone A" and "phone B") against local Supabase ----
-// Run with: supabase start, then SUPABASE_URL=... SUPABASE_ANON_KEY=... npm test
-const url = process.env.SUPABASE_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY;
+// ---- Integration: two independent clients ("phone A" and "phone B") against the Supabase project ----
+// Uses EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY from .env.local (see .env.example) via vitest.config.ts.
+// Each run creates anonymous users and rooms in that project.
+const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 async function phone(): Promise<SupabaseClient> {
   const client = createClient(url!, anonKey!, { auth: { persistSession: false } });
@@ -50,7 +51,7 @@ async function rejection(p: Promise<unknown>): Promise<RoomError> {
 
 const names = (residents: Resident[]) => residents.map((r) => r.displayName).sort();
 
-describe.skipIf(!url || !anonKey)('UC-01 rooms (two phones, local Supabase)', () => {
+describe.skipIf(!url || !anonKey)('UC-01 rooms (two phones, Supabase project)', () => {
   it('acceptance: create on A, join by code on B, both list both names', async () => {
     const a = await phone();
     const b = await phone();

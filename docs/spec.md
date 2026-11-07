@@ -80,7 +80,7 @@ A mobile app where flatmates join one Room by scanning a QR code, with only a di
 ## Testing Decisions
 
 - **What makes a good test**: assert external behaviour visible to a resident or to another device (what phone B sees after phone A acts), never internal calls, table layout or component structure.
-- **One seam**: the client data-access layer, exercised by two independent client instances ("phone A" and "phone B") against a local Supabase stack. The Claude API is stubbed at the Edge Function boundary with controllable outcomes: valid suggestion, invalid assignee, malformed output, timeout.
+- **One seam**: the client data-access layer, exercised by two independent client instances ("phone A" and "phone B") against the hosted Supabase project (D-026). The Claude API is stubbed at the Edge Function boundary with controllable outcomes: valid suggestion, invalid assignee, malformed output, timeout.
 - **Covered through that seam**: the three acceptance checks from the PDF (join visible on both clients; chore assigned with reason visible on B, done on B, completed on A; shopping item appears and ticks across clients), duplicate join, unique names, invalid code, rotation fallback, fairness with a newcomer, pass until open to room, room-scope completion credit, repeat creating the next Occurrence, RLS isolation between two Rooms, duplicate shopping item handling, and offline queue then sync.
 - **Time-dependent behaviour** (reminder schedules, overdue): tested by injecting a clock into the scheduling logic and asserting the computed schedule, not by waiting.
 - **Out of the automated suite**: UI rendering, camera scanning and OS notification delivery are checked manually on two real phones before the pitch.
