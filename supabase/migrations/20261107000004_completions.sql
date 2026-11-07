@@ -15,9 +15,13 @@ create policy "room members can read completions"
   on public.completions for select
   using (is_room_member(room_id));
 
+-- resident_id is a residents.id, not an auth user id: check it belongs to the caller in this room.
 create policy "room members can insert completions"
   on public.completions for insert
-  with check (is_room_member(room_id) and resident_id = auth.uid());
+  with check (exists (
+    select 1 from public.residents r
+    where r.id = resident_id and r.room_id = completions.room_id and r.user_id = auth.uid()
+  ));
 
 -- Publish completions changes so clients get live updates.
 alter publication supabase_realtime add table public.completions;
@@ -51,8 +55,12 @@ begin
     raise exception 'occurrence not found';
   end if;
 
-  -- Authorise: caller must be in the same room
-  if not is_room_member(v_occurrence.room_id) then
+  -- Authorise: caller must be a resident of the same room (and this is who gets the credit)
+  select * into v_resident
+  from residents
+  where room_id = v_occurrence.room_id and user_id = auth.uid();
+
+  if v_resident.id is null then
     raise exception 'not authenticated';
   end if;
 
@@ -69,17 +77,16 @@ begin
   v_completed_at := now();
 
   insert into completions (occurrence_id, room_id, resident_id, completed_at)
-  values (p_occurrence_id, v_occurrence.room_id, auth.uid(), v_completed_at);
+  values (p_occurrence_id, v_occurrence.room_id, v_resident.id, v_completed_at);
 
   -- Return info for the confirmation screen
-  select * into v_resident from residents where id = auth.uid();
-
   return json_build_object(
-    'resident_id',   auth.uid(),
+    'resident_id',   v_resident.id,
     'display_name',  v_resident.display_name,
     'completed_at',  v_completed_at
   );
 end;
 $$;
 
+revoke all on function public.complete_occurrence(uuid) from public, anon;
 grant execute on function public.complete_occurrence(uuid) to authenticated;

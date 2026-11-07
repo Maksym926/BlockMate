@@ -49,6 +49,8 @@ export const choresApi = {
   ) => chores.subscribeOccurrences(client, roomId, onChange, onError),
 };
 
-export type { Chore, ChoreError, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, RepeatInterval } from './chores';
+export type { Chore, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, RepeatInterval } from './chores';
+// A class used with instanceof in the UI, so it must be a value export, not type-only.
+export { ChoreError } from './chores';
 export type { Resident, Room, RoomPreview } from './rooms';
 export { RoomError } from './rooms';
