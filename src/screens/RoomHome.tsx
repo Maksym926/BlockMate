@@ -7,6 +7,7 @@ import { Banner, Button, Card, ResidentRow, TabBar } from '../ui/components';
 import { defaultDueAt, joinedLabel, nextDueAt } from '../ui/format';
 import { color, font } from '../ui/theme';
 import { useChores } from '../ui/useChores';
+import { useReminders } from '../ui/useReminders';
 import { useResidents } from '../ui/useResidents';
 import type { ChoreFormData } from './AddChore';
 import { AddChore } from './AddChore';
@@ -28,6 +29,7 @@ type InRoomView =
 export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => void }) {
   const { residents, loaded, error: residentsError } = useResidents(room.id);
   const { items: choreItems, error: choreError } = useChores(room.id);
+  useReminders(choreItems, residents);
   const [view, setView] = useState<InRoomView>({ name: 'tabs', activeTab: 'flat' });
   const [newcomer, setNewcomer] = useState<string | null>(null);
   const known = useRef<Set<string> | null>(null);
