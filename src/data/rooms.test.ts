@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   RoomError,
   createRoom,
+  findMyRoom,
   joinRoom,
   listResidents,
   mapRoomError,
@@ -64,6 +65,10 @@ describe.skipIf(!url || !anonKey)('UC-01 rooms (two phones, local Supabase)', ()
 
     expect(names(await listResidents(a, room.id))).toEqual(['Alex', 'Maya']);
     expect(names(await listResidents(b, room.id))).toEqual(['Alex', 'Maya']);
+
+    // Each phone knows which entry is its own.
+    const onB = await listResidents(b, room.id);
+    expect(onB.filter((r) => r.isYou).map((r) => r.displayName)).toEqual(['Alex']);
   });
 
   it('story 10: A sees B join live, within 10 seconds', async () => {
@@ -140,6 +145,14 @@ describe.skipIf(!url || !anonKey)('UC-01 rooms (two phones, local Supabase)', ()
     expect(preview).toEqual({ roomName: 'Flat 12B', residentNames: ['Maya'] });
     // Peeking does not join.
     expect(await listResidents(a, room.id)).toHaveLength(1);
+  });
+
+  it('4c: a returning phone finds its room again; a fresh phone finds none', async () => {
+    const a = await phone();
+    const fresh = await phone();
+    expect(await findMyRoom(fresh)).toBeNull();
+    const room = await createRoom(a, 'Flat Again', 'Maya');
+    expect(await findMyRoom(a)).toEqual(room);
   });
 
   it('RLS: residents of one room cannot see another room, and outsiders see nothing', async () => {

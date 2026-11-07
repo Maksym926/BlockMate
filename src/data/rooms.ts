@@ -30,6 +30,8 @@ export interface Resident {
   id: string;
   displayName: string;
   joinedAt: string;
+  /** True for the signed-in user's own entry, so the UI can show "(you)". */
+  isYou: boolean;
 }
 
 export interface RoomPreview {
@@ -71,6 +73,25 @@ export async function createRoom(
   return toRoom(data as RoomRow);
 }
 
+/**
+ * The room this device's anonymous user already belongs to, or null. Lets the app reopen straight into the room
+ * (UC-01 4c) with no extra local state. One room per device for the MVP.
+ */
+export async function findMyRoom(client: SupabaseClient): Promise<Room | null> {
+  const { data: sessionData } = await client.auth.getSession();
+  const userId = sessionData.session?.user.id;
+  if (!userId) return null;
+  const { data, error } = await client
+    .from('residents')
+    .select('rooms(id, name, join_code)')
+    .eq('user_id', userId)
+    .order('joined_at')
+    .limit(1);
+  if (error) throw mapRoomError(error);
+  const row = (data as unknown as { rooms: RoomRow | null }[])[0];
+  return row?.rooms ? toRoom(row.rooms) : null;
+}
+
 /** Room name and who is already in, for the join screen before a display name is chosen (D-024). */
 export async function previewRoom(client: SupabaseClient, code: string): Promise<RoomPreview> {
   const { data, error } = await client.rpc('preview_room', { p_code: code });
@@ -96,15 +117,18 @@ export async function joinRoom(
 
 interface ResidentRow {
   id: string;
+  user_id: string;
   display_name: string;
   joined_at: string;
 }
 
 /** Residents of a room the caller belongs to, in join order. Non-residents see nothing (RLS). */
 export async function listResidents(client: SupabaseClient, roomId: string): Promise<Resident[]> {
+  const { data: sessionData } = await client.auth.getSession();
+  const myUserId = sessionData.session?.user.id;
   const { data, error } = await client
     .from('residents')
-    .select('id, display_name, joined_at')
+    .select('id, user_id, display_name, joined_at')
     .eq('room_id', roomId)
     .order('joined_at');
   if (error) throw mapRoomError(error);
@@ -112,6 +136,7 @@ export async function listResidents(client: SupabaseClient, roomId: string): Pro
     id: row.id,
     displayName: row.display_name,
     joinedAt: row.joined_at,
+    isYou: row.user_id === myUserId,
   }));
 }
 

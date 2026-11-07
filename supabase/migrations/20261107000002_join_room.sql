@@ -19,7 +19,7 @@ begin
   end if;
   select * into target from public.rooms where join_code = public.normalize_join_code(p_code);
   if target.id is null then
-    raise exception 'room not found' using errcode = 'P0002';
+    raise exception 'room not found' using errcode = 'PT404';
   end if;
   return query
     select target.name,
@@ -27,6 +27,7 @@ begin
     from public.residents r where r.room_id = target.id;
 end $$;
 
+-- PT404 is PostgREST's custom code for HTTP 404: an unknown code is a client error, not a 500.
 -- Join (or re-open) a room. Already a member -> return the room, no duplicate (UC-01 4c).
 create function public.join_room(p_code text, p_display_name text)
 returns public.rooms
@@ -39,7 +40,7 @@ begin
   end if;
   select * into target from public.rooms where join_code = public.normalize_join_code(p_code);
   if target.id is null then
-    raise exception 'room not found' using errcode = 'P0002';
+    raise exception 'room not found' using errcode = 'PT404';
   end if;
   if exists (select 1 from public.residents where room_id = target.id and user_id = auth.uid()) then
     return target;
