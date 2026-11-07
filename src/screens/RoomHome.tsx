@@ -6,9 +6,12 @@ import { choresApi } from '../data/app';
 import { Banner, Button, Card, ResidentRow, TabBar } from '../ui/components';
 import { defaultDueAt, joinedLabel, nextDueAt } from '../ui/format';
 import { color, font } from '../ui/theme';
+import { Toast } from '../ui/Toast';
+import { useChoreAlerts } from '../ui/useChoreAlerts';
 import { useChores } from '../ui/useChores';
 import { useReminders } from '../ui/useReminders';
 import { useResidents } from '../ui/useResidents';
+import { useToast } from '../ui/useToast';
 import type { ChoreFormData } from './AddChore';
 import { AddChore } from './AddChore';
 import { AssigneePicker } from './AssigneePicker';
@@ -30,6 +33,9 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
   const { residents, loaded, error: residentsError } = useResidents(room.id);
   const { items: choreItems, error: choreError } = useChores(room.id);
   useReminders(choreItems, residents);
+  const { message: toastMessage, show: showToast } = useToast();
+  const myResidentId = residents.find((r) => r.isYou)?.id;
+  useChoreAlerts(choreItems, residents, myResidentId, showToast);
   const [view, setView] = useState<InRoomView>({ name: 'tabs', activeTab: 'flat' });
   const [newcomer, setNewcomer] = useState<string | null>(null);
   const known = useRef<Set<string> | null>(null);
@@ -258,6 +264,7 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
         )}
       </View>
       <TabBar activeTab={activeTab} onTab={(tab) => setView({ name: 'tabs', activeTab: tab })} />
+      <Toast message={toastMessage} />
     </SafeAreaView>
   );
 }
