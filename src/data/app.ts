@@ -1,6 +1,7 @@
-// The app's single Supabase client, wrapped in the data-access layer. Screens import `roomsApi` only.
+// The app's single Supabase client, wrapped in the data-access layer. Screens import `roomsApi` / `choresApi` only.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import * as chores from './chores';
 import * as rooms from './rooms';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -37,5 +38,16 @@ export const roomsApi = {
   ) => rooms.subscribeResidents(client, roomId, onChange, onError),
 };
 
+export const choresApi = {
+  create: (params: Parameters<typeof chores.createChore>[1]) => chores.createChore(client, params),
+  delete: (choreId: string) => chores.deleteChore(client, choreId),
+  subscribeOccurrences: (
+    roomId: string,
+    onChange: (items: chores.ChoreWithOccurrence[]) => void,
+    onError?: (error: chores.ChoreError) => void,
+  ) => chores.subscribeOccurrences(client, roomId, onChange, onError),
+};
+
+export type { Chore, ChoreError, ChoreScope, ChoreWithOccurrence, Occurrence, RepeatInterval } from './chores';
 export type { Resident, Room, RoomPreview } from './rooms';
 export { RoomError } from './rooms';

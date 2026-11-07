@@ -1,3 +1,4 @@
+import type { RepeatInterval } from '../data/app';
 import { avatarColors } from './theme';
 
 export const initial = (name: string): string => name.trim().charAt(0).toUpperCase() || '?';
@@ -21,4 +22,63 @@ export function joinedLabel(joinedAt: string, now: Date, isCreator: boolean): st
 export function alreadyInLabel(names: string[]): string {
   if (names.length === 0) return '';
   return names.length === 1 ? `${names[0]} is already in` : `${names.join(', ')} are already in`;
+}
+
+/** Display label for a chore's repeat interval (D-021). */
+export function repeatLabel(interval: RepeatInterval, days: number | null): string {
+  if (!interval) return 'Once';
+  if (interval === 'daily') return 'Daily';
+  if (interval === 'weekly') return 'Weekly';
+  if (interval === 'custom' && days === 30) return 'Monthly';
+  if (interval === 'custom' && days != null) return `Every ${days} days`;
+  return 'Repeating';
+}
+
+function startOfDay(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+/** Human-readable due label for an occurrence. Never mutates `now`. */
+export function dueLabel(dueAt: string, now: Date): string {
+  const due = new Date(dueAt);
+  const today = startOfDay(now);
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const dayAfter = new Date(tomorrow.getTime() + 86_400_000);
+  const nextWeek = new Date(today.getTime() + 7 * 86_400_000);
+
+  if (due < today) {
+    const days = Math.ceil((today.getTime() - due.getTime()) / 86_400_000);
+    return `${days} ${days === 1 ? 'day' : 'days'} late`;
+  }
+  if (due < tomorrow) return 'Due today';
+  if (due < dayAfter) return 'Due tomorrow';
+  if (due < nextWeek) return `Due ${due.toLocaleDateString('en-GB', { weekday: 'long' })}`;
+  return `Due ${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+}
+
+/** Which section of the chore list an occurrence belongs to. */
+export function occurrenceGroup(
+  dueAt: string,
+  status: string,
+  now: Date,
+): 'overdue' | 'today' | 'week' | 'later' | 'done' {
+  if (status === 'done') return 'done';
+  const due = new Date(dueAt);
+  const today = startOfDay(now);
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const nextWeek = new Date(today.getTime() + 7 * 86_400_000);
+  if (due < today) return 'overdue';
+  if (due < tomorrow) return 'today';
+  if (due < nextWeek) return 'week';
+  return 'later';
+}
+
+/** Default due time: today at 18:00 local; tomorrow if already past 18:00 today (D-021). */
+export function defaultDueAt(): Date {
+  const d = new Date();
+  d.setHours(18, 0, 0, 0);
+  if (d <= new Date()) d.setDate(d.getDate() + 1);
+  return d;
 }

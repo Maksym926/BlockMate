@@ -14,13 +14,24 @@ import type { Resident } from '../data/app';
 import { avatarColor, initial } from './format';
 import { color, font, radius } from './theme';
 
-/** Screen frame with an optional back button, matching the canvas layout. */
-export function Screen({ onBack, children }: { onBack?: () => void; children: ReactNode }) {
+/** Screen frame with an optional back (‹) or close (×) button, matching the canvas layout. */
+export function Screen({
+  onBack,
+  onClose,
+  children,
+}: {
+  onBack?: () => void;
+  onClose?: () => void;
+  children: ReactNode;
+}) {
+  const action = onBack ?? onClose;
+  const glyph = onClose && !onBack ? '×' : '‹';
+  const label = onClose && !onBack ? 'Close' : 'Back';
   return (
     <SafeAreaView style={styles.screen}>
-      {onBack ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={styles.back}>
-          <Text style={styles.backGlyph}>‹</Text>
+      {action ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={action} style={styles.back}>
+          <Text style={[styles.backGlyph, onClose && !onBack && styles.closeGlyph]}>{glyph}</Text>
         </Pressable>
       ) : null}
       <View style={styles.main}>{children}</View>
@@ -113,6 +124,33 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
+/** Small inline pill/badge for due date, repeat info, etc. */
+export function Tag({ children, tone = 'neutral' }: { children: string; tone?: 'warn' | 'brand' | 'neutral' }) {
+  const bg = { warn: color.warnTint, brand: color.brandTint, neutral: color.surface2 }[tone];
+  const ink = { warn: color.warnTintInk, brand: color.brandTintInk, neutral: color.inkMuted }[tone];
+  return (
+    <View style={[styles.tag, { backgroundColor: bg }]}>
+      <Text style={[styles.tagText, { color: ink }]}>{children}</Text>
+    </View>
+  );
+}
+
+type TabId = 'chores' | 'shopping' | 'flat';
+const TAB_LABELS: Record<TabId, string> = { chores: 'Chores', shopping: 'Shopping', flat: 'Flat' };
+
+/** Bottom tab bar for in-room navigation. */
+export function TabBar({ activeTab, onTab }: { activeTab: TabId; onTab: (t: TabId) => void }) {
+  return (
+    <View style={styles.tabBar}>
+      {(['chores', 'shopping', 'flat'] as TabId[]).map((tab) => (
+        <Pressable key={tab} style={styles.tabItem} onPress={() => onTab(tab)} accessibilityRole="tab">
+          <Text style={[styles.tabLabel, activeTab === tab && styles.tabActive]}>{TAB_LABELS[tab]}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export function Avatar({ name, index, size = 40 }: { name: string; index: number; size?: number }) {
   return (
     <View
@@ -161,6 +199,7 @@ const styles = StyleSheet.create({
   main: { flex: 1, paddingHorizontal: 16, paddingBottom: 16, gap: 24 },
   back: { width: 44, height: 44, marginLeft: 8, alignItems: 'center', justifyContent: 'center' },
   backGlyph: { fontSize: 34, lineHeight: 36, color: color.ink },
+  closeGlyph: { fontSize: 28, lineHeight: 36 },
   title: { ...font.largeTitle, color: color.ink },
   muted: { ...font.body, color: color.inkMuted },
   button: { minHeight: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
@@ -183,4 +222,16 @@ const styles = StyleSheet.create({
   banner: { padding: 14, borderRadius: radius.md },
   bannerText: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   card: { backgroundColor: color.surface1, borderRadius: radius.md, padding: 16 },
+  tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, alignSelf: 'flex-start' },
+  tagText: { ...font.caption },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: color.surface1,
+    borderTopWidth: 1,
+    borderTopColor: color.hairline,
+    height: 60,
+  },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabLabel: { ...font.caption, color: color.inkMuted },
+  tabActive: { color: color.brand, fontWeight: '700' },
 });
