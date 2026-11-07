@@ -12,15 +12,19 @@ export function ChoreDetail({
   residents,
   onBack,
   onComplete,
+  onPass,
 }: {
   item: ChoreWithOccurrence;
   residents: Resident[];
   onBack: () => void;
   /** Called when "Mark as done" is pressed; should complete and navigate away. */
   onComplete: () => Promise<void>;
+  /** If provided, shows the Pass button. Only present when the current user is the assignee. */
+  onPass?: () => Promise<void>;
 }) {
   const { chore, occurrence } = item;
   const [busy, setBusy] = useState(false);
+  const [passing, setPassing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const singleFlight = useSingleFlight();
 
@@ -42,6 +46,18 @@ export function ChoreDetail({
       } catch (e) {
         setError(choreMessageFor(e));
         setBusy(false);
+      }
+    });
+
+  const handlePass = () =>
+    singleFlight(async () => {
+      setPassing(true);
+      setError(null);
+      try {
+        await onPass!();
+      } catch (e) {
+        setError(choreMessageFor(e));
+        setPassing(false);
       }
     });
 
@@ -81,6 +97,11 @@ export function ChoreDetail({
             </Text>
           </View>
         </Card>
+      ) : chore.scope === 'person' && !assignee && occurrence.passedBy.length > 0 ? (
+        <Card style={styles.assigneeCard}>
+          <Text style={styles.assigneeLabel}>OPEN TO EVERYONE</Text>
+          <Text style={styles.assigneeBody}>All flatmates passed — anyone can step up and get the credit.</Text>
+        </Card>
       ) : chore.scope === 'room' ? (
         <Card style={styles.assigneeCard}>
           <Text style={styles.assigneeLabel}>FOR THE WHOLE FLAT</Text>
@@ -90,10 +111,20 @@ export function ChoreDetail({
 
       <View style={{ flex: 1 }} />
 
+      {onPass && !done ? (
+        <Button
+          label="Pass to someone else"
+          variant="ghost"
+          onPress={handlePass}
+          loading={passing}
+          disabled={busy}
+        />
+      ) : null}
+
       <Button
         label={done ? 'Already done' : '✓ Mark as done'}
         onPress={handleComplete}
-        disabled={done}
+        disabled={done || passing}
         loading={busy}
       />
     </Screen>

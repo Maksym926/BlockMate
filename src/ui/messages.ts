@@ -16,6 +16,8 @@ export function choreMessageFor(error: unknown): string {
       return 'You need at least 2 flatmates to assign chores.';
     case 'ALREADY_DONE':
       return 'This chore is already marked as done.';
+    case 'ALREADY_PASSED':
+      return 'You already passed this chore.';
     case 'OCCURRENCE_NOT_FOUND':
       return 'This chore no longer exists.';
     default:

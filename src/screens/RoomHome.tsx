@@ -106,22 +106,53 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
   }
 
   if (view.name === 'choreDetail') {
+    const { item } = view;
+    const canPass =
+      item.chore.scope === 'person' &&
+      item.occurrence.status !== 'done' &&
+      item.occurrence.assigneeId !== null &&
+      residents.find((r) => r.id === item.occurrence.assigneeId)?.isYou === true;
+
     return (
       <ChoreDetail
-        item={view.item}
+        item={item}
         residents={residents}
         onBack={() => setView({ name: 'tabs', activeTab: 'chores' })}
         onComplete={async () => {
-          const completion = await choresApi.complete(view.item.occurrence.id);
+          const completion = await choresApi.complete(item.occurrence.id);
           setView({
             name: 'choreCompleted',
             result: {
               completion,
-              choreTitle: view.item.chore.title,
+              choreTitle: item.chore.title,
               flatmateCount: residents.length,
             },
           });
         }}
+        onPass={canPass ? async () => {
+          const passResult = await choresApi.pass(item.occurrence.id);
+          if (!passResult.allPassed) {
+            // Get new AI suggestion (Edge Function handles rotation fallback internally)
+            const suggestion = await choresApi.suggest(
+              room.id,
+              item.chore.title,
+              passResult.passedBy,
+              passResult.oldAssigneeId,
+            );
+            if (suggestion) {
+              await choresApi.assign(item.occurrence.id, suggestion.assigneeId, suggestion.reason, suggestion.source);
+            } else {
+              // Client-side rotation: first eligible resident by join order
+              const eligible = residents
+                .filter((r) => !passResult.passedBy.includes(r.id))
+                .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+              if (eligible[0]) {
+                await choresApi.assign(item.occurrence.id, eligible[0].id, null, 'fallback');
+              }
+            }
+          }
+          setView({ name: 'tabs', activeTab: 'chores' });
+        } : undefined}
       />
     );
   }

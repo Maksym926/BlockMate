@@ -13,6 +13,7 @@ export type ChoreErrorCode =
   | 'CHORE_NOT_FOUND'
   | 'OCCURRENCE_NOT_FOUND'
   | 'ALREADY_DONE'
+  | 'ALREADY_PASSED'
   | 'NOT_AUTHENTICATED'
   | 'UNKNOWN';
 
@@ -60,6 +61,13 @@ export interface CompletionResult {
   completedAt: string;
 }
 
+/** Returned by pass_occurrence RPC. */
+export interface PassResult {
+  allPassed: boolean;
+  passedBy: string[];
+  oldAssigneeId: string | null;
+}
+
 /** Returned by the suggest-assignee Edge Function. */
 export interface SuggestionResult {
   assigneeId: string;
@@ -75,6 +83,7 @@ const SERVER_MESSAGES: Record<string, ChoreErrorCode> = {
   'chore not found': 'CHORE_NOT_FOUND',
   'occurrence not found': 'OCCURRENCE_NOT_FOUND',
   'already done': 'ALREADY_DONE',
+  'already passed': 'ALREADY_PASSED',
   'not authenticated': 'NOT_AUTHENTICATED',
 };
 
@@ -181,6 +190,29 @@ export async function completeOccurrence(client: SupabaseClient, occurrenceId: s
   if (error) throw mapChoreError(error);
   const r = data as { resident_id: string; display_name: string; completed_at: string };
   return { residentId: r.resident_id, displayName: r.display_name, completedAt: r.completed_at };
+}
+
+export async function passOccurrence(client: SupabaseClient, occurrenceId: string): Promise<PassResult> {
+  const { data, error } = await client.rpc('pass_occurrence', { p_occurrence_id: occurrenceId });
+  if (error) throw mapChoreError(error);
+  const r = data as { all_passed: boolean; passed_by: string[]; old_assignee_id: string | null };
+  return { allPassed: r.all_passed, passedBy: r.passed_by ?? [], oldAssigneeId: r.old_assignee_id };
+}
+
+export async function assignOccurrence(
+  client: SupabaseClient,
+  occurrenceId: string,
+  assigneeId: string | null,
+  suggestionReason: string | null,
+  suggestionSource: 'ai' | 'fallback' | 'manual',
+): Promise<void> {
+  const { error } = await client.rpc('assign_occurrence', {
+    p_occurrence_id: occurrenceId,
+    p_assignee_id: assigneeId ?? null,
+    p_suggestion_reason: suggestionReason ?? null,
+    p_suggestion_source: suggestionSource,
+  });
+  if (error) throw mapChoreError(error);
 }
 
 export async function deleteChore(client: SupabaseClient, choreId: string): Promise<void> {

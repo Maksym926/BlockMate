@@ -41,6 +41,13 @@ export const roomsApi = {
 export const choresApi = {
   create: (params: Parameters<typeof chores.createChore>[1]) => chores.createChore(client, params),
   complete: (occurrenceId: string) => chores.completeOccurrence(client, occurrenceId),
+  pass: (occurrenceId: string) => chores.passOccurrence(client, occurrenceId),
+  assign: (
+    occurrenceId: string,
+    assigneeId: string | null,
+    suggestionReason: string | null,
+    suggestionSource: 'ai' | 'fallback' | 'manual',
+  ) => chores.assignOccurrence(client, occurrenceId, assigneeId, suggestionReason, suggestionSource),
   delete: (choreId: string) => chores.deleteChore(client, choreId),
   suggest: (
     roomId: string,
@@ -55,7 +62,7 @@ export const choresApi = {
   ) => chores.subscribeOccurrences(client, roomId, onChange, onError),
 };
 
-export type { Chore, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, RepeatInterval, SuggestionResult } from './chores';
+export type { Chore, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, PassResult, RepeatInterval, SuggestionResult } from './chores';
 // A class used with instanceof in the UI, so it must be a value export, not type-only.
 export { ChoreError } from './chores';
 export type { Resident, Room, RoomPreview } from './rooms';
