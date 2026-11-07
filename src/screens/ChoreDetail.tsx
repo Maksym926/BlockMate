@@ -64,6 +64,13 @@ export function ChoreDetail({
 
       {error ? <Banner tone="danger">{error}</Banner> : null}
 
+      {occurrence.suggestionSource === 'ai' && occurrence.suggestionReason ? (
+        <Card style={styles.reasonCard}>
+          <Text style={styles.reasonLabel}>✦ WHY</Text>
+          <Text style={styles.reasonText}>{occurrence.suggestionReason}</Text>
+        </Card>
+      ) : null}
+
       {chore.scope === 'person' && assignee ? (
         <Card style={styles.assigneeCard}>
           <Text style={styles.assigneeLabel}>ASSIGNED TO</Text>
@@ -96,6 +103,9 @@ export function ChoreDetail({
 const styles = StyleSheet.create({
   header: { gap: 10 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  reasonCard: { gap: 4 },
+  reasonLabel: { ...font.overline, color: color.brand },
+  reasonText: { ...font.body, color: color.ink },
   assigneeCard: { gap: 10 },
   assigneeLabel: { ...font.overline, color: color.inkMuted },
   assigneeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

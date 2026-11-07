@@ -60,6 +60,13 @@ export interface CompletionResult {
   completedAt: string;
 }
 
+/** Returned by the suggest-assignee Edge Function. */
+export interface SuggestionResult {
+  assigneeId: string;
+  reason: string | null;
+  source: 'ai' | 'fallback';
+}
+
 const SERVER_MESSAGES: Record<string, ChoreErrorCode> = {
   'chore title required': 'CHORE_TITLE_REQUIRED',
   'assignee required': 'ASSIGNEE_REQUIRED',
@@ -131,6 +138,8 @@ export async function createChore(
     scope: ChoreScope;
     assigneeId: string | null;
     dueAt: Date;
+    suggestionReason?: string | null;
+    suggestionSource?: 'ai' | 'fallback' | 'manual';
   },
 ): Promise<Chore> {
   const { data, error } = await client.rpc('create_chore', {
@@ -141,9 +150,30 @@ export async function createChore(
     p_scope: params.scope,
     p_assignee_id: params.assigneeId ?? null,
     p_due_at: params.dueAt.toISOString(),
+    p_suggestion_reason: params.suggestionReason ?? null,
+    p_suggestion_source: params.suggestionSource ?? 'manual',
   });
   if (error) throw mapChoreError(error);
   return toChore(data as ChoreRow);
+}
+
+/** Call the suggest-assignee Edge Function. Returns null on any failure (caller shows no suggestion). */
+export async function suggestAssignee(
+  client: SupabaseClient,
+  roomId: string,
+  choreTitle: string,
+  excludeIds: string[] = [],
+  lastAssigneeId: string | null = null,
+): Promise<SuggestionResult | null> {
+  const { data, error } = await client.functions.invoke('suggest-assignee', {
+    body: { room_id: roomId, chore_title: choreTitle, exclude_ids: excludeIds, last_assignee_id: lastAssigneeId },
+  });
+  if (error || !data?.assignee_id) return null;
+  return {
+    assigneeId: data.assignee_id as string,
+    reason: (data.reason as string) || null,
+    source: (data.source as 'ai' | 'fallback') ?? 'fallback',
+  };
 }
 
 export async function completeOccurrence(client: SupabaseClient, occurrenceId: string): Promise<CompletionResult> {

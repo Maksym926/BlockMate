@@ -30,7 +30,7 @@ export function AddChore({
   onCreateRoomScope,
 }: {
   onClose: () => void;
-  onPickAssignee: (data: ChoreFormData) => void;
+  onPickAssignee: (data: ChoreFormData) => Promise<void>;
   onCreateRoomScope: (data: ChoreFormData) => Promise<void>;
 }) {
   const [title, setTitle] = useState('');
@@ -53,7 +53,14 @@ export function AddChore({
         scope,
       };
       if (scope === 'person') {
-        onPickAssignee(data);
+        setBusy(true);
+        setError(null);
+        try {
+          await onPickAssignee(data);
+        } catch (e) {
+          setError(choreMessageFor(e));
+          setBusy(false);
+        }
         return;
       }
       setBusy(true);

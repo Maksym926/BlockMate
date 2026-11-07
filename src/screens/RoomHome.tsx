@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { ChoreWithOccurrence, Room } from '../data/app';
+import type { ChoreWithOccurrence, Room, SuggestionResult } from '../data/app';
 import { choresApi } from '../data/app';
 import { Banner, Button, Card, ResidentRow, TabBar } from '../ui/components';
 import { defaultDueAt, joinedLabel } from '../ui/format';
@@ -21,7 +21,7 @@ type Tab = 'chores' | 'shopping' | 'flat';
 type InRoomView =
   | { name: 'tabs'; activeTab: Tab }
   | { name: 'addChore' }
-  | { name: 'pickAssignee'; data: ChoreFormData }
+  | { name: 'pickAssignee'; data: ChoreFormData; suggestion: SuggestionResult | null }
   | { name: 'choreDetail'; item: ChoreWithOccurrence }
   | { name: 'choreCompleted'; result: CompleteViewResult };
 
@@ -43,7 +43,12 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
 
   // ── Chore creation helpers ───────────────────────────────────────────────
 
-  const createChore = async (data: ChoreFormData, assigneeId: string | null) => {
+  const createChore = async (
+    data: ChoreFormData,
+    assigneeId: string | null,
+    suggestionSource: 'ai' | 'fallback' | 'manual' = 'manual',
+    suggestionReason: string | null = null,
+  ) => {
     await choresApi.create({
       roomId: room.id,
       title: data.title,
@@ -52,6 +57,8 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
       scope: data.scope,
       assigneeId,
       dueAt: defaultDueAt(),
+      suggestionSource,
+      suggestionReason,
     });
     setView({ name: 'tabs', activeTab: 'chores' });
   };
@@ -65,20 +72,35 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
   if (view.name === 'addChore') {
     return (
       <AddChore
-        onClose={() => setView({ name: 'tabs', activeTab: view.name === 'addChore' ? 'chores' : 'flat' })}
-        onPickAssignee={(data) => setView({ name: 'pickAssignee', data })}
+        onClose={() => setView({ name: 'tabs', activeTab: 'chores' })}
+        onPickAssignee={async (data) => {
+          // Call the AI Edge Function while the button shows loading; fall back silently.
+          let suggestion: SuggestionResult | null = null;
+          try { suggestion = await choresApi.suggest(room.id, data.title); } catch {}
+          setView({ name: 'pickAssignee', data, suggestion });
+        }}
         onCreateRoomScope={(data) => createChore(data, null)}
       />
     );
   }
 
   if (view.name === 'pickAssignee') {
+    const { suggestion } = view;
     return (
       <AssigneePicker
         choreTitle={view.data.title}
         residents={residents}
+        suggestion={suggestion}
         onBack={() => setView({ name: 'addChore' })}
-        onAssign={(residentId) => createChore(view.data, residentId)}
+        onAssign={(residentId) => {
+          const isAiPick = suggestion && residentId === suggestion.assigneeId;
+          return createChore(
+            view.data,
+            residentId,
+            isAiPick ? suggestion.source : 'manual',
+            isAiPick ? suggestion.reason : null,
+          );
+        }}
       />
     );
   }
