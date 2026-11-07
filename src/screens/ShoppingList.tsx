@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import type { Resident, ShoppingItem } from '../data/app';
-import { shoppingApi } from '../data/app';
 import { Banner, Card } from '../ui/components';
 import { completionTime } from '../ui/format';
 import { color, font, radius } from '../ui/theme';
@@ -24,7 +23,10 @@ export function ShoppingList({
   roomId: string;
   residents: Resident[];
 }) {
-  const { active, bought, error } = useShopping(roomId);
+  const myResidentId = residents.find((r) => r.isYou)?.id;
+  const { active, bought, error, isOnline, pendingCount, addItem, tickItem, untickItem, deleteItem, increaseQuantity } =
+    useShopping(roomId, myResidentId);
+
   const [draft, setDraft] = useState('');
   const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
   const [adding, setAdding] = useState(false);
@@ -39,7 +41,6 @@ export function ShoppingList({
   const tryAdd = async () => {
     const name = draft.trim();
     if (!name) return;
-    // Case-insensitive duplicate check among active items (D-domain invariant)
     const existing = active.find((i) => i.name.toLowerCase() === name.toLowerCase());
     if (existing) {
       setDuplicate({ id: existing.id, name: existing.name });
@@ -47,46 +48,47 @@ export function ShoppingList({
     }
     setAdding(true);
     try {
-      await shoppingApi.addItem(roomId, name, 1);
+      await addItem(name, 1);
       setDraft('');
-    } catch {}
-    setAdding(false);
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleIncrease = async () => {
     if (!duplicate) return;
     setBusyId(duplicate.id);
     try {
-      await shoppingApi.increaseQuantity(duplicate.id, 1);
+      await increaseQuantity(duplicate.id, 1);
       setDraft('');
       setDuplicate(null);
-    } catch {}
-    setBusyId(null);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const handleAddAnyway = async () => {
     if (!duplicate) return;
     const name = draft.trim();
-    setAdding(true);
     setDuplicate(null);
+    setAdding(true);
     try {
-      await shoppingApi.addItem(roomId, name, 1);
+      await addItem(name, 1);
       setDraft('');
-    } catch {}
-    setAdding(false);
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleTick = async (item: ShoppingItem) => {
     if (busyId) return;
     setBusyId(item.id);
     try {
-      if (item.status === 'active') {
-        await shoppingApi.tickItem(item.id);
-      } else {
-        await shoppingApi.untickItem(item.id);
-      }
-    } catch {}
-    setBusyId(null);
+      if (item.status === 'active') await tickItem(item.id);
+      else await untickItem(item.id);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const confirmDelete = (item: ShoppingItem) => {
@@ -97,7 +99,7 @@ export function ShoppingList({
         style: 'destructive',
         onPress: () => {
           setBusyId(item.id);
-          shoppingApi.deleteItem(item.id).finally(() => setBusyId(null));
+          deleteItem(item.id).finally(() => setBusyId(null));
         },
       },
     ]);
@@ -108,19 +110,20 @@ export function ShoppingList({
     const adder = residentById[item.addedBy];
     const buyer = item.boughtBy ? residentById[item.boughtBy] : null;
     const displayName = item.quantity > 1 ? `${item.name} × ${item.quantity}` : item.name;
+    const isTemp = item.id.startsWith('temp_');
     const busy = busyId === item.id;
 
     return (
       <Pressable
         key={item.id}
-        style={[styles.item, isBought && styles.itemBought]}
-        onLongPress={() => confirmDelete(item)}
-        accessibilityHint="Long press to remove"
+        style={[styles.item, isBought && styles.itemBought, isTemp && styles.itemPending]}
+        onLongPress={() => !isTemp && confirmDelete(item)}
+        accessibilityHint={isTemp ? undefined : 'Long press to remove'}
       >
         {/* Tick circle */}
         <Pressable
-          onPress={() => !busy && handleTick(item)}
-          style={[styles.circle, isBought && styles.circleBought]}
+          onPress={() => !busy && !isTemp && handleTick(item)}
+          style={[styles.circle, isBought && styles.circleBought, (busy || isTemp) && { opacity: 0.45 }]}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: isBought, busy }}
           accessibilityLabel={isBought ? `Un-tick ${item.name}` : `Tick ${item.name}`}
@@ -130,7 +133,9 @@ export function ShoppingList({
 
         {/* Name + caption */}
         <View style={{ flex: 1 }}>
-          <Text style={[styles.itemName, isBought && styles.itemNameBought]}>{displayName}</Text>
+          <Text style={[styles.itemName, isBought && styles.itemNameBought]}>
+            {displayName}
+          </Text>
           {isBought && buyer ? (
             <Text style={styles.itemCaption}>
               {buyer.isYou ? 'You' : buyer.displayName},{' '}
@@ -142,6 +147,9 @@ export function ShoppingList({
             </Text>
           ) : null}
         </View>
+
+        {/* Pending indicator for offline adds */}
+        {isTemp ? <Text style={styles.pendingDot}>⏳</Text> : null}
       </Pressable>
     );
   };
@@ -157,7 +165,17 @@ export function ShoppingList({
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.heading}>Shopping</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.heading}>Shopping</Text>
+          {!isOnline ? (
+            <View style={styles.offlineBadge}>
+              <Text style={styles.offlineBadgeText}>
+                {pendingCount > 0 ? `${pendingCount} pending` : 'Offline'}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         {error ? <Banner tone="warn">{error}</Banner> : null}
 
@@ -193,8 +211,9 @@ export function ShoppingList({
             </Text>
             <View style={styles.dupActions}>
               <Pressable
-                style={styles.dupBtn}
+                style={[styles.dupBtn, busyId === duplicate.id && { opacity: 0.45 }]}
                 onPress={handleIncrease}
+                disabled={busyId === duplicate.id}
                 accessibilityRole="button"
                 accessibilityLabel="Increase quantity by 1"
               >
@@ -218,9 +237,7 @@ export function ShoppingList({
             <Text style={styles.emptyBody}>Add the first item above.</Text>
           </Card>
         ) : active.length > 0 ? (
-          <View style={{ gap: 8 }}>
-            {active.map(renderItem)}
-          </View>
+          <View style={{ gap: 8 }}>{active.map(renderItem)}</View>
         ) : null}
 
         {/* Bought section */}
@@ -237,13 +254,17 @@ export function ShoppingList({
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 32, gap: 16 },
-  heading: { ...font.largeTitle, color: color.ink },
-  sectionLabel: { ...font.overline, color: color.inkMuted },
-  addRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  heading: { ...font.largeTitle, color: color.ink, flex: 1 },
+  offlineBadge: {
+    backgroundColor: color.warnTint,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
   },
+  offlineBadgeText: { ...font.caption, color: color.warnTintInk, fontWeight: '700' },
+  sectionLabel: { ...font.overline, color: color.inkMuted },
+  addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   addInput: {
     flex: 1,
     minHeight: 48,
@@ -286,6 +307,7 @@ const styles = StyleSheet.create({
     borderColor: color.hairline,
   },
   itemBought: { opacity: 0.65 },
+  itemPending: { borderStyle: 'dashed', borderColor: color.inkMuted },
   circle: {
     width: 24,
     height: 24,
@@ -300,6 +322,7 @@ const styles = StyleSheet.create({
   itemName: { ...font.callout, color: color.ink },
   itemNameBought: { textDecorationLine: 'line-through', color: color.inkMuted },
   itemCaption: { ...font.caption, color: color.inkMuted, marginTop: 2 },
+  pendingDot: { fontSize: 14 },
   empty: { gap: 6, alignItems: 'center', paddingVertical: 24 },
   emptyTitle: { ...font.heading, color: color.ink },
   emptyBody: { ...font.body, color: color.inkMuted },

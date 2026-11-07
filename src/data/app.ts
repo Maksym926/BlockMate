@@ -76,7 +76,8 @@ export const shoppingApi = {
     roomId: string,
     onChange: (items: shopping.ShoppingItem[]) => void,
     onError?: (error: shopping.ShoppingError) => void,
-  ) => shopping.subscribeItems(client, roomId, onChange, onError),
+    onReconnect?: () => void,
+  ) => shopping.subscribeItems(client, roomId, onChange, onError, onReconnect),
 };
 
 export type { Chore, ChoreScope, ChoreWithOccurrence, CompletionResult, Occurrence, PassResult, RepeatInterval, SuggestionResult } from './chores';

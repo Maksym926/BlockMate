@@ -97,6 +97,7 @@ export function subscribeItems(
   roomId: string,
   onChange: (items: ShoppingItem[]) => void,
   onError?: (error: ShoppingError) => void,
+  onReconnect?: () => void,
 ): () => void {
   const reload = async () => {
     try {
@@ -118,7 +119,9 @@ export function subscribeItems(
       () => void reload(),
     )
     .subscribe((status) => {
-      if (status === 'CHANNEL_ERROR') {
+      if (status === 'SUBSCRIBED') {
+        onReconnect?.();
+      } else if (status === 'CHANNEL_ERROR') {
         onError?.(new ShoppingError('REALTIME_ERROR', 'Live updates paused. Reconnecting…'));
       }
     });
