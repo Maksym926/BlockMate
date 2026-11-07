@@ -30,7 +30,11 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
           <Text style={styles.title}>{room.name}</Text>
         </View>
         {error ? <Banner tone="warn">{error}</Banner> : null}
-        {newcomer ? <Banner tone="brand">{`${newcomer} just joined. You're all in.`}</Banner> : null}
+        {newcomer ? (
+          <Banner tone="brand">
+            {`${newcomer} just joined. ${residents.length === 2 ? "You're both in." : "You're all in."}`}
+          </Banner>
+        ) : null}
         <View style={{ gap: 12 }}>
           <Text style={styles.over}>{loaded ? `FLATMATES · ${residents.length}` : 'FLATMATES'}</Text>
           <Card style={{ gap: 16 }}>

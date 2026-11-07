@@ -4,7 +4,7 @@ import { roomsApi, type Room, type RoomPreview } from '../data/app';
 import { Avatar, Button, Card, Field, Muted, Screen, Title } from '../ui/components';
 import { alreadyInLabel } from '../ui/format';
 import { messageFor, NAME_REQUIRED_MESSAGE } from '../ui/messages';
-import { color, font } from '../ui/theme';
+import { color, font, radius } from '../ui/theme';
 import { useSingleFlight } from '../ui/useSingleFlight';
 
 export function JoinName({
@@ -50,6 +50,9 @@ export function JoinName({
             <Text style={styles.name}>{preview.roomName}</Text>
             <Text style={styles.cap}>{alreadyInLabel(preview.residentNames)}</Text>
           </View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>✓ Room found</Text>
+          </View>
         </Card>
         <Field
           label="Your name"
@@ -74,4 +77,6 @@ const styles = StyleSheet.create({
   found: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: color.hairline },
   name: { ...font.callout, color: color.ink },
   cap: { ...font.caption, color: color.inkMuted },
+  badge: { backgroundColor: color.brandTint, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill },
+  badgeText: { ...font.caption, color: color.brandTintInk, fontWeight: '700' },
 });

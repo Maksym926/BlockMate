@@ -50,7 +50,7 @@ export function JoinCode({
           <Banner tone="warn">Camera access is off, so we can't scan. You can allow it later in Settings.</Banner>
         ) : null}
         <Field
-          label="Join code"
+          label="Room code"
           value={code}
           onChangeText={(t) => {
             setCode(t.toUpperCase());

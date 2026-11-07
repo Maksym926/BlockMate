@@ -58,12 +58,23 @@ export function JoinScan({
             onBarcodeScanned={onScanned}
           />
         ) : null}
+        {/* Corner bracket overlay (D-023 design) */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+        </View>
         {permission?.granted ? <Text style={styles.hint}>Looking for a code…</Text> : null}
       </View>
       <Button label="Type the code instead" variant="tint" onPress={() => onTypeInstead(false)} />
     </Screen>
   );
 }
+
+const C = 28; // corner bracket arm length
+const T = 3;  // corner bracket thickness
+const M = 20; // margin from viewfinder edge
 
 const styles = StyleSheet.create({
   viewfinder: { flex: 1, backgroundColor: color.scannerBackdrop, borderRadius: 24, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center' },
@@ -77,4 +88,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  corner: { position: 'absolute', width: C, height: C, borderColor: color.brand },
+  cornerTL: { top: M, left: M, borderTopWidth: T, borderLeftWidth: T, borderTopLeftRadius: 4 },
+  cornerTR: { top: M, right: M, borderTopWidth: T, borderRightWidth: T, borderTopRightRadius: 4 },
+  cornerBL: { bottom: M, left: M, borderBottomWidth: T, borderLeftWidth: T, borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: M, right: M, borderBottomWidth: T, borderRightWidth: T, borderBottomRightRadius: 4 },
 });
