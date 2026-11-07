@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ChoreWithOccurrence, Room, SuggestionResult } from '../data/app';
 import { choresApi } from '../data/app';
 import { Banner, Button, Card, ResidentRow, TabBar } from '../ui/components';
-import { defaultDueAt, joinedLabel } from '../ui/format';
+import { defaultDueAt, joinedLabel, nextDueAt } from '../ui/format';
 import { color, font } from '../ui/theme';
 import { useChores } from '../ui/useChores';
 import { useResidents } from '../ui/useResidents';
@@ -120,6 +120,7 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
         onBack={() => setView({ name: 'tabs', activeTab: 'chores' })}
         onComplete={async () => {
           const completion = await choresApi.complete(item.occurrence.id);
+          // Navigate to success screen immediately; create next occurrence in background (D-007).
           setView({
             name: 'choreCompleted',
             result: {
@@ -128,6 +129,31 @@ export function RoomHome({ room, onShowCode }: { room: Room; onShowCode: () => v
               flatmateCount: residents.length,
             },
           });
+          if (item.chore.repeatInterval) {
+            void (async () => {
+              try {
+                const due = nextDueAt(item.occurrence.dueAt, item.chore.repeatInterval, item.chore.repeatDays);
+                const nextId = await choresApi.createNextOccurrence(item.chore.id, due);
+                if (item.chore.scope === 'person') {
+                  const suggestion = await choresApi.suggest(room.id, item.chore.title, [], item.occurrence.assigneeId);
+                  if (suggestion) {
+                    await choresApi.assign(nextId, suggestion.assigneeId, suggestion.reason, suggestion.source);
+                  } else {
+                    // Client-side rotation fallback
+                    const sorted = [...residents].sort(
+                      (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
+                    );
+                    const lastIdx = sorted.findIndex((r) => r.id === item.occurrence.assigneeId);
+                    const next = sorted[(lastIdx + 1) % sorted.length];
+                    if (next) await choresApi.assign(nextId, next.id, null, 'fallback');
+                  }
+                }
+                // room-scope: no assignee needed; Realtime will propagate the new occurrence
+              } catch {
+                // Silently ignore — user is on the success screen, Realtime will refresh
+              }
+            })();
+          }
         }}
         onPass={canPass ? async () => {
           const passResult = await choresApi.pass(item.occurrence.id);

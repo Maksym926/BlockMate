@@ -89,6 +89,15 @@ export function completionTime(completedAt: string, now: Date): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+/** Next occurrence due date: shifts the previous due_at by the repeat interval (schedule-based, D-007). */
+export function nextDueAt(dueAt: string, interval: RepeatInterval, repeatDays: number | null): Date {
+  const due = new Date(dueAt);
+  if (interval === 'daily') return new Date(due.getTime() + 86_400_000);
+  if (interval === 'weekly') return new Date(due.getTime() + 7 * 86_400_000);
+  if (interval === 'custom' && repeatDays) return new Date(due.getTime() + repeatDays * 86_400_000);
+  return due;
+}
+
 /** Default due time: today at 18:00 local; tomorrow if already past 18:00 today (D-021). */
 export function defaultDueAt(): Date {
   const d = new Date();

@@ -14,6 +14,7 @@ export type ChoreErrorCode =
   | 'OCCURRENCE_NOT_FOUND'
   | 'ALREADY_DONE'
   | 'ALREADY_PASSED'
+  | 'CHORE_NOT_REPEATING'
   | 'NOT_AUTHENTICATED'
   | 'UNKNOWN';
 
@@ -84,6 +85,7 @@ const SERVER_MESSAGES: Record<string, ChoreErrorCode> = {
   'occurrence not found': 'OCCURRENCE_NOT_FOUND',
   'already done': 'ALREADY_DONE',
   'already passed': 'ALREADY_PASSED',
+  'chore not repeating': 'CHORE_NOT_REPEATING',
   'not authenticated': 'NOT_AUTHENTICATED',
 };
 
@@ -197,6 +199,20 @@ export async function passOccurrence(client: SupabaseClient, occurrenceId: strin
   if (error) throw mapChoreError(error);
   const r = data as { all_passed: boolean; passed_by: string[]; old_assignee_id: string | null };
   return { allPassed: r.all_passed, passedBy: r.passed_by ?? [], oldAssigneeId: r.old_assignee_id };
+}
+
+/** Creates the next occurrence for a repeating chore. Returns the new occurrence id. */
+export async function createNextOccurrence(
+  client: SupabaseClient,
+  choreId: string,
+  dueAt: Date,
+): Promise<string> {
+  const { data, error } = await client.rpc('create_next_occurrence', {
+    p_chore_id: choreId,
+    p_due_at: dueAt.toISOString(),
+  });
+  if (error) throw mapChoreError(error);
+  return data as string;
 }
 
 export async function assignOccurrence(

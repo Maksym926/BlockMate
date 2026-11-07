@@ -42,6 +42,7 @@ export const choresApi = {
   create: (params: Parameters<typeof chores.createChore>[1]) => chores.createChore(client, params),
   complete: (occurrenceId: string) => chores.completeOccurrence(client, occurrenceId),
   pass: (occurrenceId: string) => chores.passOccurrence(client, occurrenceId),
+  createNextOccurrence: (choreId: string, dueAt: Date) => chores.createNextOccurrence(client, choreId, dueAt),
   assign: (
     occurrenceId: string,
     assigneeId: string | null,
